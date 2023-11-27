@@ -1,0 +1,56 @@
+---
+title: "hw6"
+output: html_document
+date: "2022-12-01"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tidytext)
+library(wordcloud)
+library(igraph)
+library(ggraph)
+```
+
+```{r}
+data<-read.table("simpsons-transcripts.txt",sep="^")
+
+```
+
+```{r}
+simpsons<-data.frame(text=data$V5)
+tidy_simpsons<-unnest_tokens(simpsons, word, text)
+freqs = tidy_simpsons %>% count(word)
+top_freqs = freqs %>%arrange(desc(n)) %>%slice_head(n = 20)
+ggplot(data = top_freqs,
+       aes(x = reorder(word, -n), y = n)) +
+  geom_col() +
+  labs(title = "Top 20 frequent words") +
+  xlab("word") +
+  ylab("count")
+```
+
+
+
+```{r}
+simpsons_bigrams <- simpsons %>% unnest_tokens(bigram, text, token = "ngrams", n = 2) %>% filter(!is.na(bigram))
+bigrams_separated <- simpsons_bigrams %>% separate(bigram, c("word1", "word2"), sep = " ")
+bigrams_filtered <- bigrams_separated %>%filter(!word1 %in% stop_words$word) %>%filter(!word2 %in% stop_words$word)
+count_bigrams <- bigrams_filtered %>%count(word1, word2, sort = TRUE)
+```
+
+```{r}
+bigrams_graph <- count_bigrams %>%filter(n > 120) %>% graph_from_data_frame()
+set.seed(1234)
+ggraph(bigrams_graph, layout = "fr") +
+  geom_edge_link() +
+  geom_node_point() +
+  geom_node_text(aes(label = name),
+                 vjust = 1, hjust = 1) +
+  labs(title = "Common bigrams in Simpsons")
+```
+
+```{r}
+bigrams_separated  %>%count(word1, word2, sort = TRUE)
+```
